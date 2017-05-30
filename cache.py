@@ -83,8 +83,10 @@ class DNSServerCache:
             return form_response(self.cache[url], self.get_cname(url), type_,
                                  [ANSWER_RECORDS, AUTHORITY_RECORDS,
                                   ADDITIONAL_RECORDS])
-        else:
+        elif sub_url in self.cache:
             return form_response(self.cache[sub_url], self.get_cname(sub_url),
                                  type_,
                                  [ANSWER_RECORDS, AUTHORITY_RECORDS,
                                   ADDITIONAL_RECORDS], url)
+        else:
+            raise KeyError
