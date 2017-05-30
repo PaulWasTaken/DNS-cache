@@ -6,7 +6,9 @@ from response.cname_response import CNAMEResponse
 from response.methods import extract_url
 from response.mx_response import MXResponse
 from response.ns_response import NSResponse
+from response.ptr_response import PTRResponse
 from response.soa_response import SOAResponse
+from response.txt_response import TXTResponse
 
 
 def dismantle_response(packet, query_len):
@@ -43,8 +45,12 @@ def dismantle(packet, current_pos):
         response = CNAMEResponse(response.domain_name)
     elif type_ == 6:
         response = SOAResponse(response.domain_name)
+    elif type_ == 12:
+        response = PTRResponse(response.domain_name)
     elif type_ == 15:
         response = MXResponse(response.domain_name)
+    elif type_ == 16:
+        response = TXTResponse(response.domain_name)
     else:
         raise NotImplementedError(type_)
 

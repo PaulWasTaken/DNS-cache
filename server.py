@@ -13,27 +13,27 @@ from query import dismantle_query, build_query
 from response.response_processor import dismantle_response
 from ttl_timer import TTLTimer
 
+QUERY_TYPES = {
+    1: "A",
+    2: "NS",
+    5: "CNAME",
+    6: "SOA",
+    12: "PTR",
+    15: "MX",
+    16: "TXT",
+    28: "AAAA"
+}
+
 
 def print_result(address, query, source):
     print("{ip}, {type}, {url}, {source}"
           .format(ip=address,
-                  type=DNSServer.query_types[query.type_],
+                  type=QUERY_TYPES[query.type_],
                   url=query.url,
                   source=source))
 
 
 class DNSServer:
-    query_types = {
-        1: "A",
-        2: "NS",
-        5: "CNAME",
-        6: "SOA",
-        12: "PTR",
-        15: "MX",
-        16: "TXT",
-        28: "AAAA"
-    }
-
     def __init__(self, settings, debug=False):
         server_port = settings.server_info.split(":")
         self.forwarder_port = int(server_port[1]) \

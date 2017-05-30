@@ -27,10 +27,11 @@ def error_handler(port=None, id_=None):
     elif type_ == socket.timeout:
         print("The upper server hasn't answered.\n"
               "Query id: {}".format(struct.unpack("!H", id_)[0]))
-
     elif type_ == struct.error:
         print("Probably incorrect server response. Try another one.\n"
               "Query id: {}".format(struct.unpack("!H", id_)[0]))
+    elif type_ == KeyError:
+        print("It looks like there is no match for type {}".format(info[1]))
     elif type_ == NotImplementedError:
         print("{} type is not supported.".format(info[1]))
 
