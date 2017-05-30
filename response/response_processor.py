@@ -46,7 +46,7 @@ def dismantle(packet, current_pos):
     elif type_ == 15:
         response = MXResponse(response.domain_name)
     else:
-        raise NotImplementedError
+        raise NotImplementedError(type_)
 
     response.add_specific_info(packet, start)
     response.part_len += padding

@@ -21,8 +21,6 @@ class DNSServerCache:
         if not query.sub_url:
             return self._search_in_cache(query.url, query.type_)
         else:
-            if self._search_in_cache(query.url, query.type_):
-                return True
             return self._search_in_cache(query.sub_url, query.type_, query.url)
 
     def _search_in_cache(self, url, type_, sub_url=None):

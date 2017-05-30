@@ -3,13 +3,15 @@ import socket
 import time
 import struct
 
-from concurrent.futures import ThreadPoolExecutor
-
 from cache import DNSServerCache
+from concurrent.futures import ThreadPoolExecutor
+from cycle_processor import CycleProcessor, CycleError
+from error_handler import error_handler
 from packet_processor import insert_answers_amount, add_query_info, \
     process_query
 from query import dismantle_query, build_query
 from response.response_processor import dismantle_response
+from ttl_timer import TTLTimer
 
 
 def print_result(address, query, source):
@@ -33,15 +35,19 @@ class DNSServer:
     }
 
     def __init__(self, settings, debug=False):
-        server, port = settings.server_info.split(":")
-        self.forwarder_port = int(port) if port else 53
-        self.upper_server = server if server else "8.8.8.8"
+        server_port = settings.server_info.split(":")
+        self.forwarder_port = int(server_port[1]) \
+            if len(server_port) > 1 \
+            else 53
+        self.upper_server = server_port[0] if server_port[0] else "8.8.8.8"
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.sock.settimeout(0.1)
         self.port = settings.port
+        self.sock.setblocking(False)
         self.sock.bind(("localhost", self.port))
         self.logging(debug)
         self.cache = DNSServerCache()
+        self.cycle_processor = CycleProcessor()
+        self.ttl_timer = None
 
     @staticmethod
     def logging(debug):
@@ -54,36 +60,37 @@ class DNSServer:
     def invoke(self):
         print("Was started at {port} port. Time: {data} GMT+0".format(
             port=self.port, data=time.asctime(time.gmtime())))
-        counter = 0
         with ThreadPoolExecutor(max_workers=64) as executor:
             try:
+                self.ttl_timer = TTLTimer(self.cache.update_ttl)
+                self.ttl_timer.start()
                 while 1:
                     try:
                         data, addr = self.sock.recvfrom(4096)
                         # print("Connected: {}:{}".format(addr[0], addr[1]))
                         logging.debug("Received from a client: {}\n"
                                       .format(data))
-                    except socket.timeout:
-                        counter += 1
-                        if counter == 10:
-                            self.cache.update_ttl()
-                            counter = 0
+                    except:
+                        error_handler(port=self.port)
                         continue
                     executor.submit(self.process_new_client,
                                     addr, data).result()
-            except KeyboardInterrupt:
-                print("Finishing...")
-                logging.debug("\n---------The program was closed.---------\n")
+            except:
+                error_handler(self.port)
+            finally:
+                self.ttl_timer.cancel()
                 self.sock.close()
                 executor.shutdown()
 
     def process_new_client(self, addr, data):
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
             id_ = data[:2]
+            if self.cycle_processor.is_cycle(id_):
+                raise CycleError
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            sock.bind(("", self.port))
+            sock.settimeout(2)
             try:
-                sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                sock.bind(("", self.port))
-                sock.settimeout(2)
                 # ans = struct.unpack("!H", data[])
                 # auth = struct.unpack("!H", data[])
                 add = struct.unpack("!H", data[10:12])[0]
@@ -95,12 +102,9 @@ class DNSServer:
                 else:
                     self.data_not_in_cache(id_, query, sock, addr)
                     print_result(addr[0], query, "forwarder")
-            except socket.timeout:
-                print("The upper server hasn't answered.\n"
-                      "Query id: {}".format(struct.unpack("!H", id_)[0]))
-            except struct.error:
-                print("Probably incorrect server response. Try another one.\n"
-                      "Query id: {}".format(struct.unpack("!H", id_)[0]))
+                self.cycle_processor.delete_id(id_)
+            except:
+                error_handler(id_=id_)
 
     def data_in_cache(self, query, sock, addr, data, add_info):
         packet = self.form_response(data, query, add_info)

@@ -56,7 +56,5 @@ def add_query_info(response, source, add_info):
 
 def process_query(query):
     parts = query.url.split(".")
-    if len(parts) == 3:
-        query.sub_url = ".".join(parts[1:])
-    if len(parts) > 3:
-        raise NotImplementedError
+    if len(parts) > 2:
+        query.sub_url = ".".join(parts[len(parts) - 2:])
