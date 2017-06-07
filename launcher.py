@@ -16,7 +16,7 @@ def create_parser():
 if __name__ == "__main__":
     parser = create_parser()
     settings = parser.parse_args()
-    try:
-        DNSServer(settings, settings.debug).invoke()
-    except OSError:
-        print("{port} port is being used.".format(port=settings.port))
+    # try:
+    DNSServer(settings, settings.debug).invoke()
+    # except OSError:
+    #     print("{port} port is being used.".format(port=settings.port))

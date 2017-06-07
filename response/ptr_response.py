@@ -16,9 +16,9 @@ class PTRResponse(Response):
         self.part_len = 10 + self.data_len
         self.data_len = len(self.data) + 2
 
-    def build_packet(self, url, ttl):
+    def build_packet(self, ttl):
         packet = b""
-        packet = add_name(packet, url.split("."))
+        packet = add_name(packet, self.domain_name.split("."))
         packet += struct.pack("!H", self.type)
         packet += struct.pack("!H", self.class_)
         packet += struct.pack("!I", ttl)

@@ -1,35 +1,25 @@
 import logging
 import socket
-import time
 import struct
+import time
 
+from asyncio import as_completed
 from cache import DNSServerCache
 from concurrent.futures import ThreadPoolExecutor
 from cycle_processor import CycleProcessor, CycleError
 from error_handler import error_handler
 from packet_processor import insert_answers_amount, add_query_info, \
     process_query
-from query import dismantle_query, build_query
+from query.query import dismantle_query, build_query
+from query.query_types import QueryTypes
 from response.response_processor import dismantle_response
 from ttl_timer import TTLTimer
-
-QUERY_TYPES = {
-    1: "A",
-    2: "NS",
-    5: "CNAME",
-    6: "SOA",
-    12: "PTR",
-    15: "MX",
-    16: "TXT",
-    28: "AAAA",
-    255: "ANY"
-}
 
 
 def print_result(address, query, source):
     print("{ip}, {type}, {url}, {source}"
           .format(ip=address,
-                  type=QUERY_TYPES[query.type_],
+                  type=QueryTypes(query.type_).name,
                   url=query.url,
                   source=source))
 
@@ -42,7 +32,7 @@ class DNSServer:
         self.upper_server = server_port[0] if server_port[0] else "8.8.8.8"
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.port = settings.port
-        self.sock.setblocking(False)
+        self.sock.setblocking(0.1)
         self.sock.bind(("localhost", self.port))
         self.logging(debug)
         self.cache = DNSServerCache()
@@ -70,14 +60,17 @@ class DNSServer:
                         # print("Connected: {}:{}".format(addr[0], addr[1]))
                         logging.debug("Received from a client: {}\n"
                                       .format(data))
+                        scanning = [executor.submit(self.process_new_client,
+                                                    addr, data)]
+                        for future in as_completed(scanning):
+                            future.result()
                     except:
                         error_handler(port=self.port)
                         continue
-                    executor.submit(self.process_new_client,
-                                    addr, data).result()
-            except:
-                error_handler(self.port)
+            except KeyboardInterrupt:
+                print("Finishing...")
             finally:
+                logging.debug("\n---------The program was closed.---------\n")
                 self.ttl_timer.cancel()
                 self.sock.close()
                 executor.shutdown()
@@ -89,7 +82,7 @@ class DNSServer:
                 raise CycleError
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             sock.bind(("", self.port))
-            sock.settimeout(2)
+            sock.settimeout(0.5)
             try:
                 # ans = struct.unpack("!H", data[])
                 # auth = struct.unpack("!H", data[])

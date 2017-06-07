@@ -21,9 +21,9 @@ class CNAMEResponse(Response):
             self.class_ = unpacked[1]
             self.part_len = len(self.domain_name) + 4
 
-    def build_packet(self, url, ttl):
+    def build_packet(self, ttl):
         packet = b""
-        packet = add_name(packet, url.split("."))
+        packet = add_name(packet, self.domain_name.split("."))
 
         packet += struct.pack("!H", self.type)
         packet += struct.pack("!H", self.class_)

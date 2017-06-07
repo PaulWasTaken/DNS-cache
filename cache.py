@@ -1,6 +1,7 @@
 import struct
 
 from packet_processor import form_response
+from query.query_types import QueryTypes
 
 ANSWER_RECORDS = "answer"
 AUTHORITY_RECORDS = "authority"
@@ -12,13 +13,19 @@ class Record:
         self.data = data
         self.ttl = ttl
 
+    def __hash__(self):
+        return hash((self.data.class_, self.data.type, self.data.data))
+
+    def __eq__(self, other):
+        return self.data == other.data
+
 
 class DNSServerCache:
     def __init__(self):
         self.cache = {}
 
     def check(self, query):
-        if query.type_ is 255:
+        if query.type_ == QueryTypes.ANY.value:
             return True
         if not query.sub_url:
             return self._search_in_cache(query.url, query.type_)
@@ -33,7 +40,7 @@ class DNSServerCache:
                 for record in self.cache[url][records_name]:
                     if sub_url:
                         if record.data.type is type_ and \
-                                    record.data.domain_name == sub_url:
+                                        record.data.domain_name == sub_url:
                             return True
                     else:
                         if record.data.type is type_:
@@ -55,8 +62,10 @@ class DNSServerCache:
         start = end = 0
         for record_name, amount in list(zip(record_names, amounts)):
             end += amount
-            self.cache[url][record_name] = [Record(info, info.ttl)
-                                            for info in data[start:end]]
+            self.cache[url][record_name] += [Record(info, info.ttl)
+                                             for info in data[start:end]]
+            self.cache[url][record_name] = list(
+                set(self.cache[url][record_name]))
             start += amount
 
     def update_ttl(self):
@@ -76,7 +85,7 @@ class DNSServerCache:
     def get_cname(self, url):
         for records_name in self.cache[url]:
             for record in self.cache[url][records_name]:
-                if record.data.type == 5:
+                if record.data.type == QueryTypes.CNAME.value:
                     return record.data.data
         return url
 
@@ -84,13 +93,13 @@ class DNSServerCache:
         if url in self.cache:
             cname = self.get_cname(url)
             selector = make_selector(type_, cname is not url)
-            return form_response(self.cache[url], cname, selector,
+            return form_response(self.cache[url], selector,
                                  [ANSWER_RECORDS, AUTHORITY_RECORDS,
                                   ADDITIONAL_RECORDS])
         elif sub_url in self.cache:
             cname = self.get_cname(sub_url)
             selector = make_selector(type_, cname is not url, sub_url)
-            return form_response(self.cache[sub_url], cname, selector,
+            return form_response(self.cache[sub_url], selector,
                                  [ANSWER_RECORDS, AUTHORITY_RECORDS,
                                   ADDITIONAL_RECORDS])
         else:
@@ -99,15 +108,16 @@ class DNSServerCache:
 
 def make_selector(type_, add_cname, sub_url=None):
     def selector(record):
-        if type_ != 255:  # Any
+        if type_ != QueryTypes.ANY.value:  # Any
             if sub_url:
                 if record.data.domain_name == sub_url:
                     return True
             if add_cname:
-                if record.data.type is 5:
+                if record.data.type == QueryTypes.CNAME.value:
                     return True
             if type_ is record.data.type:
                 return True
             return False
         return True
+
     return selector

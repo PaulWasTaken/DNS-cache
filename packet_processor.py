@@ -23,7 +23,7 @@ def extract_records(records, cname, type_):
     return amount, result
 
 
-def form_response(cache, cname, selector, keys):
+def form_response(cache, selector, keys):
     response = b""
     amounts = []
     for record_name in keys:
@@ -33,7 +33,7 @@ def form_response(cache, cname, selector, keys):
                 continue
             info = record.data
             counter += 1
-            response += info.build_packet(cname, record.ttl)
+            response += info.build_packet(record.ttl)
         amounts.append(counter)
 
     return response, amounts

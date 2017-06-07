@@ -41,3 +41,8 @@ class Response:
         return "{} {} {} {} {} {}".format(
             self.domain_name, self.type, self.class_, self.ttl,
             self.data_len, self.data)
+
+    def __eq__(self, other):
+        if self.type == other.type and self.class_ == other.class_ and \
+                self.data == other.data:
+            return True

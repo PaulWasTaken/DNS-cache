@@ -1,5 +1,6 @@
 import struct
 
+from query.query_types import QueryTypes
 from response.address_response import AddressResponse
 from response.any_response import ANYResponse
 from response.base_response import Response
@@ -36,23 +37,23 @@ def dismantle(packet, current_pos):
 
     start = current_pos + padding
 
-    type_ = struct.unpack("!H", packet[start:start + 2])[0]
+    type_ = QueryTypes(struct.unpack("!H", packet[start:start + 2])[0])
 
-    if type_ in [1, 28]:
+    if type_ in [QueryTypes.A, QueryTypes.AAAA]:
         response = AddressResponse(response.domain_name)
-    elif type_ == 2:
+    elif type_ == QueryTypes.NS:
         response = NSResponse(response.domain_name)
-    elif type_ == 5:
+    elif type_ == QueryTypes.CNAME:
         response = CNAMEResponse(response.domain_name)
-    elif type_ == 6:
+    elif type_ == QueryTypes.SOA:
         response = SOAResponse(response.domain_name)
-    elif type_ == 12:
+    elif type_ == QueryTypes.PTR:
         response = PTRResponse(response.domain_name)
-    elif type_ == 15:
+    elif type_ == QueryTypes.MX:
         response = MXResponse(response.domain_name)
-    elif type_ == 16:
+    elif type_ == QueryTypes.TXT:
         response = TXTResponse(response.domain_name)
-    elif type_ == 255:
+    elif type_ == QueryTypes.ANY:
         response = ANYResponse(response.domain_name)
     else:
         raise NotImplementedError(type_)
