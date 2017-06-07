@@ -22,11 +22,11 @@ class SOAResponse(Response):
         start += 10
         self.part_len = 10 + self.data_len
         self.primary_ns = extract_url(packet, start)
-        self.data_len = len(self.primary_ns)
+        self.data_len = len(self.primary_ns) + 2
         start += get_padding(packet, start)
 
         self.mailbox = extract_url(packet, start)
-        self.data_len += len(self.mailbox)
+        self.data_len += len(self.mailbox) + 2
         start += get_padding(packet, start)
 
         other_data = struct.unpack("!5I", packet[start:])
@@ -35,7 +35,7 @@ class SOAResponse(Response):
         self.retry_interval = other_data[2]
         self.expire_interval = other_data[3]
         self.min_ttl = other_data[4]
-        self.data_len += 10
+        self.data_len += 20
 
     def build_packet(self, url, ttl):
         packet = b""

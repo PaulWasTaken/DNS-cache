@@ -3,6 +3,7 @@ import socket
 import sys
 
 import struct
+from traceback import print_tb
 
 from cycle_processor import CycleError
 
@@ -31,7 +32,8 @@ def error_handler(port=None, id_=None):
         print("Probably incorrect server response. Try another one.\n"
               "Query id: {}".format(struct.unpack("!H", id_)[0]))
     elif type_ == KeyError:
-        print("It looks like there is no match for type {}".format(info[1]))
+        print_tb(info[2])
+        # print("It looks like there is no match for type {}".format(info[1]))
     elif type_ == NotImplementedError:
         print("{} type is not supported.".format(info[1]))
 

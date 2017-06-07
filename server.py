@@ -21,7 +21,8 @@ QUERY_TYPES = {
     12: "PTR",
     15: "MX",
     16: "TXT",
-    28: "AAAA"
+    28: "AAAA",
+    255: "ANY"
 }
 
 
@@ -36,8 +37,7 @@ def print_result(address, query, source):
 class DNSServer:
     def __init__(self, settings, debug=False):
         server_port = settings.server_info.split(":")
-        self.forwarder_port = int(server_port[1]) \
-            if len(server_port) > 1 \
+        self.forwarder_port = int(server_port[1]) if len(server_port) > 1 \
             else 53
         self.upper_server = server_port[0] if server_port[0] else "8.8.8.8"
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)

@@ -1,6 +1,7 @@
 import struct
 
 from response.address_response import AddressResponse
+from response.any_response import ANYResponse
 from response.base_response import Response
 from response.cname_response import CNAMEResponse
 from response.methods import extract_url
@@ -51,6 +52,8 @@ def dismantle(packet, current_pos):
         response = MXResponse(response.domain_name)
     elif type_ == 16:
         response = TXTResponse(response.domain_name)
+    elif type_ == 255:
+        response = ANYResponse(response.domain_name)
     else:
         raise NotImplementedError(type_)
 

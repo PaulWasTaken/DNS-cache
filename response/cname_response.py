@@ -27,5 +27,8 @@ class CNAMEResponse(Response):
 
         packet += struct.pack("!H", self.type)
         packet += struct.pack("!H", self.class_)
+        packet += struct.pack("!I", ttl)
+        packet += struct.pack("!H", self.data_len)
+        packet = add_name(packet, self.data.split("."))
 
         return packet

@@ -18,6 +18,8 @@ class DNSServerCache:
         self.cache = {}
 
     def check(self, query):
+        if query.type_ is 255:
+            return True
         if not query.sub_url:
             return self._search_in_cache(query.url, query.type_)
         else:
@@ -80,13 +82,32 @@ class DNSServerCache:
 
     def get_url_data(self, url, type_, sub_url):
         if url in self.cache:
-            return form_response(self.cache[url], self.get_cname(url), type_,
+            cname = self.get_cname(url)
+            selector = make_selector(type_, cname is not url)
+            return form_response(self.cache[url], cname, selector,
                                  [ANSWER_RECORDS, AUTHORITY_RECORDS,
                                   ADDITIONAL_RECORDS])
         elif sub_url in self.cache:
-            return form_response(self.cache[sub_url], self.get_cname(sub_url),
-                                 type_,
+            cname = self.get_cname(sub_url)
+            selector = make_selector(type_, cname is not url, sub_url)
+            return form_response(self.cache[sub_url], cname, selector,
                                  [ANSWER_RECORDS, AUTHORITY_RECORDS,
-                                  ADDITIONAL_RECORDS], url)
+                                  ADDITIONAL_RECORDS])
         else:
             raise KeyError
+
+
+def make_selector(type_, add_cname, sub_url=None):
+    def selector(record):
+        if type_ != 255:  # Any
+            if sub_url:
+                if record.data.domain_name == sub_url:
+                    return True
+            if add_cname:
+                if record.data.type is 5:
+                    return True
+            if type_ is record.data.type:
+                return True
+            return False
+        return True
+    return selector

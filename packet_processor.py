@@ -23,16 +23,13 @@ def extract_records(records, cname, type_):
     return amount, result
 
 
-def form_response(cache, cname, type_, keys, sub_url=None):
+def form_response(cache, cname, selector, keys):
     response = b""
     amounts = []
     for record_name in keys:
         counter = 0
         for record in cache[record_name]:
-            if sub_url:
-                if record.data.domain_name != sub_url:
-                    continue
-            if type_ != record.data.type:
+            if not selector(record):
                 continue
             info = record.data
             counter += 1
